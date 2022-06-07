@@ -16,10 +16,14 @@ https://github.com/caj2pdf/caj2pdf/
 - PyPDF2, https://github.com/mstamy2/PyPDF2
   - pypi安装： https://pypi.org/project/PyPDF2/
   ``` bash
-  pip install PyPDF2
+  pip install PyPDF2<1.28 # 只支持1.28以下的版本
   ```
 - mutool, https://mupdf.com/index.html
   - 实际上不用安装，只要把一个 `mutool.exe` 文件放进 `caj2pdf/` 目录就行了。
+  - 也可以用 scoop 安装
+  ``` bash
+  scoop install mupdf 
+  ```
 
 ### 2. 官方用法
 
