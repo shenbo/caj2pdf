@@ -4,6 +4,8 @@ from shutil import copy
 from subprocess import check_output, STDOUT, CalledProcessError
 from utils import fnd, fnd_all, add_outlines, fnd_rvrs, fnd_unuse_no
 
+from PyPDF2 import utils as utils
+
 KDH_PASSPHRASE = b"FZHMEI"
 
 printables = ''.join([(len(repr(chr(x)))==3) and (x != 47) and (x < 128) and chr(x) or '.' for x in range(256)])
@@ -290,7 +292,12 @@ class CAJParser(object):
             raise SystemExit("Command mutool returned non-zero exit status " + str(e.returncode))
 
         # Add Outlines
-        add_outlines(self.get_toc(), "pdf_toc.pdf", dest)
+        try:
+            add_outlines(self.get_toc(), "pdf_toc.pdf", dest)
+        except utils.PdfReadError as e:
+            print("utils.PdfReadError:", str(e))
+            copy("pdf_toc.pdf", dest)
+            pass
         os.remove("pdf.tmp")
         os.remove("pdf_toc.pdf")
 
@@ -326,7 +333,9 @@ class CAJParser(object):
                     image_list.append(None)
                     image_list.append(page_data.figures)
                 else:
-                    raise SystemExit("Image Count %d != %d" % (len(page_data.figures), images_per_page))
+                    print("Page %d, Image Count %d != %d" % (i+1, len(page_data.figures), images_per_page))
+                    image_list.append(None)
+                    image_list.append(page_data.figures[0:images_per_page])
             current_offset = page_data_offset + size_of_text_section
             for j in range(images_per_page):
                 caj.seek(current_offset)
@@ -380,7 +389,18 @@ class CAJParser(object):
                         0
                     )
                 elif (image_type[image_type_enum] == "JPEG"):
-                    (height, width) = struct.unpack(">HH", image_data[163:167])
+                    # stock libjpeg location
+                    (SOFn, frame_length, bits_per_pixel, height, width) = struct.unpack(">HHBHH", image_data[158:167])
+                    if (SOFn != 0xFFC0):
+                        # "Intel(R) JPEG Library" location
+                        (SOFn, frame_length, bits_per_pixel, height, width) = struct.unpack(">HHBHH", image_data[0x272:0x27b])
+                        if (SOFn != 0xFFC0):
+                            # neither works, try brute-force
+                            import imagesize
+                            with open(".tmp.jpg", "wb") as f:
+                                f.write(image_data)
+                                (width, height) = imagesize.get(".tmp.jpg")
+                                os.remove(".tmp.jpg")
                     if (image_type_enum == 1):
                         # non-inverted JPEG Images
                         height = -height
