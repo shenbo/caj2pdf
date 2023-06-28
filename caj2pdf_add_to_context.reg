@@ -1,0 +1,13 @@
+Windows Registry Editor Version 5.00
+; -----------------------------------------------------------------------------
+;  associate '.caj' files to be run with caj2pdf cmd
+; -----------------------------------------------------------------------------
+
+[HKEY_CURRENT_USER\Software\Classes\.caj]
+@="zhiwang_file"
+
+[HKEY_CURRENT_USER\Software\Classes\zhiwang_file]
+@="Shell Script"
+
+[HKEY_CURRENT_USER\Software\Classes\zhiwang_file\shell\caj2pdf\command]
+@="\"C:\\Users\\bo\\scoop\\apps\\python310\\3.10.11\\python.exe\" "D:\\8.Repositories\\caj2pdf\\caj2pdf\" convert \"%1\""
