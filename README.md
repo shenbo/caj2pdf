@@ -1,87 +1,96 @@
 # caj2pdf: 将知网caj文件转换为pdf
 > https://github.com/caj2pdf/caj2pdf/
 
-- 官方的帮助文档并不友好，增加一些说明。
-- 增加了拖拽caj文件自动转换的脚本
-- 增加了右键菜单快捷命令
+- 在原来基础上使用 pystand 简单封装，并增加右键菜单快捷命令
 
-## 使用
-### 1. 环境和依赖（win10）
+### 1. 克隆仓库
 
-- Python 3.3+
-- PyPDF2, https://github.com/mstamy2/PyPDF2
-  - pypi安装： https://pypi.org/project/PyPDF2/
-  ``` bash
-  pip install PyPDF2
-  ```
-- mutool, https://mupdf.com/index.html
-  - 可以用 scoop 安装: `scoop install mupdf`
-  - 实际上不用安装，只把 `mutool.exe` 文件放进 `caj2pdf/` 目录就行
-
-
-### 2. 官方用法
-- 克隆仓库： `git clone https://github.com/caj2pdf/caj2pdf.git`
-- 在`caj2pdf/` 目录下运行相应的命令：
-``` bash
-# 打印文件基本信息（文件类型、页面数、大纲项目数）
-python caj2pdf show [input_file]
-
-# 转换文件
-# - 输出文件名可省略
-python caj2pdf convert [input_file] -o/--output [output_file]
-
-# 从 CAJ 文件中提取大纲信息并添加至 PDF 文件
-# 遇到不支持的文件类型或 Bug 时，可用 CAJViewer 打印 PDF 文件，并用这条命令为其添加大纲
-python caj2pdf outlines [input_file] -o/--output [pdf_file]
+``` sh
+git clone https://github.com/shenbo/caj2pdf.git
+# 或
+git clone https://github.com/caj2pdf/caj2pdf.git
 ```
 
----
+### 2. 创建 python 虚拟环境
 
-### 3. 拖拽caj文件自动转换（个人自用版）
+- 只需要安装一个库第三方库：pypdf2
+- pystand 需要 Python embed
+- 原来的 dll 文件路径是相对路径，需要调整一下
 
-上述官方命令行的方法实际使用起来比较烦，我这里写个 bat 脚本支持**拖拽文件实现格式转换**。
+``` sh
+Write-Host "==== 0. Create folders ===="
+New-Item -Path "./build" -ItemType Directory -Force
+New-Item -Path "./.cache" -ItemType Directory -Force
 
-- 方法：
+Write-Host "==== 1. Setup Python venv ===="
+if (-not (Test-Path ".venv_caj")) {
+    python -m venv .venv_caj
+}
+.venv_caj/Scripts/activate.ps1
+python -V
+pip install pypdf2
 
-在`caj2pdf`目录下，新建一个文件：`caj2pdf_convert_by_drag.bat`，内容如下：
+Write-Host "==== 1.1 Download Python embed version===="
+$pythonUrl = "https://www.python.org/ftp/python/3.13.4/python-3.13.4-embed-amd64.zip"
+if (-not (Test-Path "./.cache/python.zip")) {
+    Invoke-WebRequest -Uri $pythonUrl -OutFile "./.cache/python.zip"
+}
+Expand-Archive -Path "./.cache/python.zip" -DestinationPath "./build/runtime" -Force
 
-``` bash
-:: 切换目录
-cd /d %~dp0
+Write-Host "==== 2. Copy files to ./build/* ===="
+Get-ChildItem -Path "./*.py" | Copy-Item -Destination "./build" -Recurse -Force
+Get-ChildItem -Path "./lib" | Copy-Item -Destination "./build/lib" -Recurse -Force
+Copy-Item -Path "./caj2pdf" -Destination "./build/caj2pdf.int" -Recurse -Force
 
-:: 转换文件
-python caj2pdf convert %*
-
-:: 暂停, 方便看 error 或 log
-pause
-```
-- 使用：
-
-直接把 caj 论文文件拖到 bat 脚本文件上就可以了，生成的 pdf 文件与原 caj 文件的目录保持一致。
-
-
-### 4. 右键菜单加入 caj2pdf（个人自用版）
-
-编辑： `caj2pdf_add_to_context.reg` 中 python 与 caj2pdf 的路径。
-
-``` powershell 
-Windows Registry Editor Version 5.00
-; -----------------------------------------------------------------------------
-;  associate '.caj' files to be run with caj2pdf cmd
-; -----------------------------------------------------------------------------
-
-[HKEY_CURRENT_USER\Software\Classes\.caj]
-@="zhiwang_file"
-
-[HKEY_CURRENT_USER\Software\Classes\zhiwang_file]
-@="Shell Script"
-
-[HKEY_CURRENT_USER\Software\Classes\zhiwang_file\shell\caj2pdf\command]
-@="\"C:\\Users\\bo\\scoop\\apps\\python310\\3.10.11\\python.exe\" "D:\\8.Repositories\\caj2pdf\\caj2pdf\" convert \"%1\""
+Write-Host "==== 2.1  change .dll path ===="
+$jbigdec_file = './build/jbigdec.py'
+$old_cmd = '"./lib/bin/libjbigdec-w64.dll"'
+$new_cmd = 'os.path.join(os.path.dirname(__file__), "lib/libjbigdec-w64.dll")'
+(Get-Content $jbigdec_file).replace($old_cmd, $new_cmd) | Set-Content $jbigdec_file
 
 ```
 
-运行 `caj2pdf_add_to_context.reg` 。
+### 3. 下载 PyStand、 简单配置
+
+ref: 
+- https://github.com/skywind3000/PyStand/
+- https://skywind.me/blog/archives/3002
+
+``` sh
+Write-Host "==== 3. Download PyStand ===="
+$pystandUrl = "https://github.com/skywind3000/PyStand/releases/download/1.1.5/PyStand-v1.1.5-exe.zip"
+if (-not (Test-Path "./.cache/pystand.zip")) {
+    Invoke-WebRequest -Uri $pystandUrl -OutFile "./.cache/pystand.zip"
+}
+Expand-Archive -Path "./.cache/pystand.zip" -DestinationPath "./.cache/pystand" -Force
+Copy-Item -Path "./.cache/pystand/PyStand-x64-CLI/PyStand.exe" -Destination "./build/caj2pdf.exe" -Force
+```
+
+
+### 4. PyPDF2
+
+``` sh
+Write-Host "==== 4. Copy venv/Lib/site-packages to build/ ===="
+Copy-Item -Path ".venv_caj/Lib/site-packages/PyPDF2" -Destination "./build/site-packages/PyPDF2" -Recurse -Force
+```
+
+# Remove-Item -Path "./.cache" -Recurse -Force
+
+### 5. 加入右键菜单
+
+- 需要管理员权限
+
+``` sh
+Write-Host "==== 5. Add to context ===="
+$caj2pdf = Get-Location | Join-Path -ChildPath "build/caj2pdf.exe"
+$regKey = "HKEY_CLASSES_ROOT\SystemFileAssociations\.caj\shell\caj2pdf\command"
+$regCommand = $caj2pdf + ' convert \"%1\"'
+Write-Host ('reg add "' + $regKey + '" /ve /d "' + $regCommand + '" /f')
+reg add $regKey /ve /d $regCommand /f
+
+```
+
+详见 build.ps1 
 
 
 === ↓ 官方 Readme  ↓ ===
