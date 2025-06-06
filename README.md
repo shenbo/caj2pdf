@@ -72,9 +72,9 @@ Copy-Item -Path "./.cache/pystand/PyStand-x64-CLI/PyStand.exe" -Destination "./b
 ``` sh
 Write-Host "==== 4. Copy venv/Lib/site-packages to build/ ===="
 Copy-Item -Path ".venv_caj/Lib/site-packages/PyPDF2" -Destination "./build/site-packages/PyPDF2" -Recurse -Force
-```
 
 # Remove-Item -Path "./.cache" -Recurse -Force
+```
 
 ### 5. 加入右键菜单
 
